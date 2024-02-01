@@ -1,0 +1,7 @@
+apiVersion: v2
+name: single-deployment
+version: 1.0.0
+type: application
+dependencies: # A list of the chart requirements (optional)
+  - name: gha-runner-scale-set
+    version:  0.8.2

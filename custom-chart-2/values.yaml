@@ -1,0 +1,15 @@
+on-prem-build:
+  gha-runner-scale-set:
+    runnerScaleSetName: on-prem-build
+    githubConfigUrl: https://github.com/sas-institute-rnd-internal
+
+on-prem-build-large:
+  gha-runner-scale-set:
+    runnerScaleSetName: on-prem-build-large
+    githubConfigUrl: https://github.com/sas-institute-rnd-internal
+
+on-prem-build-x-large:
+  gha-runner-scale-set:
+    runnerScaleSetName: on-prem-build-x-large
+    githubConfigUrl: https://github.com/sas-institute-rnd-internal
+

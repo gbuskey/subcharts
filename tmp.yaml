@@ -1,0 +1,201 @@
+---
+# Source: Single namespace of deployments/charts/Single deployment/charts/gha-runner-scale-set/templates/no_permission_serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: release-name-gha-rs-no-permission
+  namespace: default
+  labels:
+    helm.sh/chart: gha-rs-0.8.2
+    app.kubernetes.io/name: release-name
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "0.8.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: gha-rs
+    actions.github.com/scale-set-name: release-name
+    actions.github.com/scale-set-namespace: default
+  finalizers:
+    - actions.github.com/cleanup-protection
+---
+# Source: Single namespace of deployments/charts/Single deployment/charts/gha-runner-scale-set/templates/manager_role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: release-name-gha-rs-manager
+  namespace: default
+  labels:
+    helm.sh/chart: gha-rs-0.8.2
+    app.kubernetes.io/name: release-name
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "0.8.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: gha-rs
+    actions.github.com/scale-set-name: release-name
+    actions.github.com/scale-set-namespace: default
+    app.kubernetes.io/component: manager-role
+  finalizers:
+    - actions.github.com/cleanup-protection
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - create
+      - delete
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - pods/status
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings
+    verbs:
+      - create
+      - delete
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles
+    verbs:
+      - create
+      - delete
+      - get
+      - patch
+      - update
+---
+# Source: Single namespace of deployments/charts/Single deployment/charts/gha-runner-scale-set/templates/manager_role_binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: release-name-gha-rs-manager
+  namespace: default
+  labels:
+    helm.sh/chart: gha-rs-0.8.2
+    app.kubernetes.io/name: release-name
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "0.8.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: gha-rs
+    actions.github.com/scale-set-name: release-name
+    actions.github.com/scale-set-namespace: default
+    app.kubernetes.io/component: manager-role-binding
+  finalizers:
+    - actions.github.com/cleanup-protection
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: release-name-gha-rs-manager
+subjects:
+  - kind: ServiceAccount
+    name: test-arc-gha-runner-scale-set-controller
+    namespace: arc-system
+---
+# Source: Single namespace of deployments/charts/Single deployment/charts/gha-runner-scale-set/templates/autoscalingrunnerset.yaml
+apiVersion: actions.github.com/v1alpha1
+kind: AutoscalingRunnerSet
+metadata:
+  name: release-name
+  namespace: default
+  labels:
+    app.kubernetes.io/component: "autoscaling-runner-set"
+    helm.sh/chart: gha-rs-0.8.2
+    app.kubernetes.io/name: release-name
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "0.8.2"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: gha-rs
+    actions.github.com/scale-set-name: release-name
+    actions.github.com/scale-set-namespace: default
+  annotations:
+    actions.github.com/cleanup-manager-role-binding: release-name-gha-rs-manager
+    actions.github.com/cleanup-manager-role-name: release-name-gha-rs-manager
+    actions.github.com/cleanup-no-permission-service-account-name: release-name-gha-rs-no-permission
+spec:
+  githubConfigUrl: https://github.com/sas-institute-rnd-pipeline-test
+  githubConfigSecret: controller-manager
+
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: release-name-gha-rs-no-permission
+      initContainers:
+        - command:
+            - cp
+            - -r
+            - -v
+            - /home/runner/externals/.
+            - /home/runner/tmpDir/
+          image: ghcr.io/actions/actions-runner:latest
+          name: init-dind-externals
+          volumeMounts:
+            - mountPath: /home/runner/tmpDir
+              name: dind-externals
+      containers:
+        - name: runner
+          command:
+            - /home/runner/run.sh
+          image: ghcr.io/actions/actions-runner:latest
+          env:
+            - name: DOCKER_HOST
+              value: unix:///run/docker/docker.sock
+          volumeMounts:
+            - mountPath: /home/runner/_work
+              name: work
+            - mountPath: /run/docker
+              name: dind-sock
+              readOnly: true
+        - args:
+            - dockerd
+            - --host=unix:///run/docker/docker.sock
+            - --group=$(DOCKER_GROUP_GID)
+          env:
+            - name: DOCKER_GROUP_GID
+              value: "123"
+          image: docker:dind
+          name: dind
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /home/runner/_work
+              name: work
+            - mountPath: /run/docker
+              name: dind-sock
+            - mountPath: /home/runner/externals
+              name: dind-externals
+      volumes:
+        - emptyDir: {}
+          name: work
+        - emptyDir: {}
+          name: dind-sock
+        - emptyDir: {}
+          name: dind-externals

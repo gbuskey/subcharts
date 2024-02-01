@@ -1,0 +1,17 @@
+apiVersion: v2
+name: Single namespace of deployments
+version: 1.0.0
+type: application
+
+dependencies:
+  - alias: on-prem-build
+    name: single-deployment
+    version:  1.0.0
+
+  - alias: on-prem-build-large
+    name: single-deployment
+    version:  1.0.0
+
+  - alias: on-prem-build-x-large
+    name: single-deployment
+    version:  1.0.0
